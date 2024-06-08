@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <toolshelf name="shelf_1" label="New Shelf">
+    <memberTool name="import geo"/>
+    <memberTool name="show full"/>
+    <memberTool name="show boxes0"/>
+  </toolshelf>
+
+  <tool name="import geo" label="import geo" icon="SOP_file">
+    <script scriptType="python"><![CDATA[obj = hou.node("/obj/") # turning to the obj context
+
+geo_container = obj.createNode("geo") # creating a geocontainer, it is created by calling a method on its parent node, its parent node is the obj context
+
+file_path = hou.ui.selectFile() # open a window to select a file
+
+file_node = geo_container.createNode("file") # creating file node
+file_parm = file_node.parm("file") # refer to the Geometry File parameter of the new file node
+file_parm.set(file_path) # setting the path of the selected file as the parameter value
+splitted_path = file_path.split("/") # splitting the path into sections
+file_name = splitted_path[-1] # we take the last part as the file name
+geo_container.setName(file_name) # rename the geo node with the name obtained above
+
+# creating additional nodes
+unpack_node = geo_container.createNode("unpack")  
+unpack_node.setInput(0,file_node) # connecting file node with unpack
+unpack_node.moveToGoodPosition() # align the nodes vertically
+
+transform_node = geo_container.createNode("xform")
+transform_node.setInput(0,unpack_node) 
+transform_node.moveToGoodPosition() 
+
+null_node = geo_container.createNode("null") 
+null_node.setInput(0,transform_node) 
+null_node.moveToGoodPosition() 
+
+# repainting the null node in red
+red = hou.Color((1.0, 0 , 0)) 
+null_node.setColor(red) 
+
+# renaming the node null 
+null_name = file_name.split(".")[-2]  
+null_node.setName("OUT_" + null_name) 
+]]></script>
+  </tool>
+
+  <tool name="show full" label="show full" icon="SOP_testgeometry_rubbertoy">
+    <script scriptType="python"><![CDATA[node_type = hou.sopNodeTypeCategory().nodeType("file") # find the node type "file"
+nodes = node_type.instances() # find nodes of this type
+
+# for all nodes, switch the display mode to "All Geometry"
+for node in nodes:
+    node.parm("loadtype").set(0)
+    
+]]></script>
+  </tool>
+
+  <tool name="show boxes" label="show boxes" icon="SOP_box">
+    <script scriptType="python"><![CDATA[camera_node_type = hou.objNodeTypeCategory().nodeType("cam")
+cameras = camera_node_type.instances()
+
+camera = cameras[0]
+t = camera.parmTuple("t").eval()
+camera_pos = hou.Vector3(t)
+print("camera_pos", camera_pos)
+    
+max_distance = hou.ui.readInput(message="Max distance")
+print("Max distance:", max_distance)
+
+node_type = hou.sopNodeTypeCategory().nodeType("file")
+nodes = node_type.instances()
+
+for node in nodes:
+    parent = node.parent()
+    if parent.name() == "cam1":
+        continue
+
+    t = parent.parmTuple("t").eval()
+    parent_pos = hou.Vector3(t)
+    print("node:", parent.name())
+    print("position:", parent_pos)
+    
+    pos_diff = camera_pos - parent_pos
+    distance = pos_diff.length()
+    print("Distance:", distance)
+    if distance > 5:
+        node.parm("loadtype").set(1)
+
+
+    
+]]></script>
+  </tool>
+
+  <tool name="show boxes0" label="show boxes" icon="SOP_bound">
+    <script scriptType="python"><![CDATA[# find the camera
+camera_node_type = hou.objNodeTypeCategory().nodeType("cam") # find the node Type "Camera"
+cameras = camera_node_type.instances() # find nodes of the type "Camera"
+camera = cameras[0] # take the first camera found
+
+# finding the camera position
+t = camera.parmTuple("t").eval() # find the value of the parameter "translate"
+camera_pos = hou.Vector3(t) #creating a vector
+print("camera_pos", camera_pos) # displaying the camera position in the console
+
+# we ask the user for the maximum distance in the dialog box
+max_distance = float(hou.ui.readInput(message="Max distance")[1]) 
+print("Max distance:", max_distance) 
+
+# finding files
+file_node_type = hou.sopNodeTypeCategory().nodeType("file")
+files = file_node_type.instances()
+
+# perform further actions for each file
+for file in files:#
+    parent = file.parent() # find the geonode that contains the file
+    if parent.name() == "cam1": # if it's a camera, then skip it
+        continue
+
+    t = parent.parmTuple("t").eval() # turn to the translate parameter of the geonode and take its value
+    parent_pos = hou.Vector3(t) # creating a vector
+    print("Geo node name:", parent.name()) # output the name of the parent node 
+    print("position:", parent_pos) # output the position of the parent node
+    
+    pos_diff = camera_pos - parent_pos # find the difference of vectors, the difference of positions
+    distance = pos_diff.length() # find the length of this difference
+    print("Distance:", distance) # output the result
+    
+    if distance > max_distance: # if the length of the difference is greater than the value entered by the user
+        file.parm("loadtype").set(1) # the object is displayed as a box
+]]></script>
+  </tool>
+
+  <shelfSetEdit name="shelf_set_1" fileLocation="C:/PROGRA~1/SIDEEF~1/HOUDIN~1.303/houdini/toolbar/ShelfDefinitions.shelf">
+    <addMemberToolshelf name="labs_toolset" inPosition="15"/>
+    <addMemberToolshelf name="pyro_dynamics" inPosition="16"/>
+    <addMemberToolshelf name="houdiniengine" inPosition="17"/>
+    <addMemberToolshelf name="animation" inPosition="18"/>
+  </shelfSetEdit>
+
+  <shelfSetEdit name="shelf_set_2" fileLocation="C:/PROGRA~1/SIDEEF~1/HOUDIN~1.303/houdini/toolbar/ShelfDefinitions.master_shelf">
+    <addMemberToolshelf name="shelf_1" inPosition="14"/>
+  </shelfSetEdit>
+</shelfDocument>
